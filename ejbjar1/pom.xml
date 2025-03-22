@@ -9,15 +9,9 @@
         <version>1.x-SNAPSHOT</version>
     </parent>
 
-    <packaging>war</packaging>
-    <artifactId>war1</artifactId>
+    <artifactId>ejbjar1</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>com.tck.cdi</groupId>
-            <artifactId>war-lib</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.tck.cdi</groupId>
             <artifactId>earlib1</artifactId>

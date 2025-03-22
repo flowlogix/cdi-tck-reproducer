@@ -1,4 +1,4 @@
-package com.cdk.cdi.warlib;
+package com.tck.cdi.warlib;
 
 import jakarta.enterprise.context.Dependent;
 
