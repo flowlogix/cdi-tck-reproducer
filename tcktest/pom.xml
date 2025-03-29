@@ -10,4 +10,13 @@
     </parent>
 
     <artifactId>tcktest</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.tck.cdi</groupId>
+            <artifactId>earlib1</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

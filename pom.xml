@@ -84,13 +84,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.jboss.arquillian.graphene</groupId>
-            <artifactId>graphene-webdriver</artifactId>
-            <version>${arquillian.graphene.version}</version>
-            <scope>test</scope>
-            <type>pom</type>
-        </dependency>
-        <dependency>
             <groupId>fish.payara.arquillian</groupId>
             <artifactId>arquillian-payara-server-remote</artifactId>
             <version>${arquillian.payara.version}</version>
@@ -122,13 +115,6 @@
                 <groupId>com.flowlogix</groupId>
                 <artifactId>flowlogix-bom</artifactId>
                 <version>${flowlogix.version}</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
-            <dependency>
-                <groupId>org.seleniumhq.selenium</groupId>
-                <artifactId>selenium-bom</artifactId>
-                <version>4.30.0</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>

@@ -20,6 +20,10 @@ package com.tck.cdi.tests;
 
 import com.flowlogix.testcontainers.PayaraServerLifecycleExtension;
 import com.flowlogix.util.ShrinkWrapManipulator;
+import com.tck.cdi.earlib1.EarLibCDIStarter;
+import com.tck.cdi.earlib1.EjbJarOneRemote;
+import jakarta.ejb.EJB;
+import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import org.eu.ingwar.tools.arquillian.extension.suite.annotations.ArquillianSuiteDeployment;
 import org.jboss.arquillian.container.test.api.Deployment;
@@ -30,7 +34,11 @@ import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 import static com.flowlogix.util.ShrinkWrapManipulator.logArchiveContents;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,34 +47,46 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(ArquillianExtension.class)
 @ArquillianSuiteDeployment
 class WebArchiveEscaperIT {
+    @Inject
+    EarLibCDIStarter earLibCDIStarter;
+    @EJB
+    EjbJarOneRemote ejbJarOneStartup;
+
     @Test
-    void sanityCheck() {
-        assertThat(true).isFalse();
+    void checkEarLibIsolation() {
+        assertThat(earLibCDIStarter).isNotNull();
+        assertThat(earLibCDIStarter.getService()).isEqualTo("EarLibServiceImpl");
+    }
+
+    @Test
+    void checkEjbJarIsolation() {
+        assertThat(ejbJarOneStartup).isNotNull();
+        assertThat(ejbJarOneStartup.getService()).isEqualTo("EarLibServiceImpl");
     }
 
     @Deployment
     @SuppressWarnings("unused")
-    static EnterpriseArchive deploy() {
-        var depl = logArchiveContents(
-                ShrinkWrap.create(EnterpriseArchive.class)
-                        .addAsLibrary(ShrinkWrapManipulator.createDeployment(JavaArchive.class, "test-classes.jar")
-                                .addPackage(WebArchiveEscaperIT.class.getPackage()))
-                        .addAsLibrary(
-                                logArchiveContents(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
-                                        "earlib1.jar", Path.of("../earlib1/pom.xml")), System.out::println))
-                        .addAsModule(ShrinkWrapManipulator.createDeployment(WebArchive.class, "com.tck.cdi-war1-1.x-SNAPSHOT.war",
-                                Path.of("../war1/pom.xml")))
-                        .addAsModule(
-                                logArchiveContents(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
-                                        "com.tck.cdi-ejbjar1-1.x-SNAPSHOT.jar",
-                                        Path.of("../ejbjar1/pom.xml")), System.out::println))
-                        .addAsLibrary(ShrinkWrap.createFromZipFile(JavaArchive.class,
-                                Path.of("../ear1/target/ear1-1.x-SNAPSHOT/lib/org.slf4j-slf4j-api-2.0.17.jar").toFile()))
-                        .addAsLibrary(ShrinkWrap.createFromZipFile(JavaArchive.class,
-                                Path.of("../ear1/target/ear1-1.x-SNAPSHOT/lib/org.slf4j-slf4j-jdk14-2.0.17.jar").toFile()))
-                        .addAsManifestResource(Path.of("../ear1/target/ear1-1.x-SNAPSHOT/META-INF/application.xml").toFile(),
-                                "application.xml"),
-                System.out::println);
-        return depl;
+    static EnterpriseArchive deploy() throws IOException {
+        var archive = ShrinkWrap.create(EnterpriseArchive.class)
+                .addAsLibrary(ShrinkWrapManipulator.createDeployment(JavaArchive.class, "test-classes.jar")
+                        .addPackage(WebArchiveEscaperIT.class.getPackage()))
+                .addAsLibrary(logArchiveContents(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                                "earlib1.jar", Path.of("../earlib1/pom.xml")), System.out::println))
+                .addAsModule(logArchiveContents(ShrinkWrapManipulator.createDeployment(WebArchive.class,
+                                                UUID.randomUUID() + "-cdi-war1.war",
+                                                Path.of("../war1/pom.xml"))
+                                        .filter(path -> !path.get().contains("earlib")),
+                                System.out::println))
+                .addAsModule(
+                        logArchiveContents(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                                UUID.randomUUID() + "-cdi-ejbjar1.jar",
+                                Path.of("../ejbjar1/pom.xml")), System.out::println));
+
+        Files.walk(Paths.get("../ear1/target"))
+                .filter(path -> path.getFileName().toString().startsWith("org.slf4j-slf4j")
+                        && path.getFileName().toString().endsWith(".jar"))
+                .map(Path::toFile).forEach(jar -> archive.addAsLibrary(ShrinkWrap.createFromZipFile(JavaArchive.class, jar)));
+
+        return logArchiveContents(archive, System.out::println);
     }
 }
