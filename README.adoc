@@ -10,6 +10,13 @@ https://github.com/flowlogix/depchain[FlowLogix Depchain Starter] archetype.
 ./mvnw verify
 ----
 
+== Running / debugging the sample (local)
+[source,shell]
+----
+./mvnw verify -Ppayara-server-local -Dmaven.failsafe.debug -Dmaven.build.cache.enabled=false \
+-Dit.test=ApplicationSharedContextIT -Dfailsafe.failIfNoSpecifiedTests=false
+----
+
 == Regenerating the project
 To regenerate the project, run the following command:
 [source,shell]
