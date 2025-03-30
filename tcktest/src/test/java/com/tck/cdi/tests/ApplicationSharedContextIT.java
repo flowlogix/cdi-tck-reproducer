@@ -1,0 +1,96 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package com.tck.cdi.tests;
+
+import com.flowlogix.testcontainers.PayaraServerLifecycleExtension;
+import com.flowlogix.util.ShrinkWrapManipulator;
+import com.tck.cdi.earlib1.EjbJarTwoRemote;
+import jakarta.ejb.EJB;
+import lombok.extern.slf4j.Slf4j;
+import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.container.test.api.OperateOnDeployment;
+import org.jboss.arquillian.junit5.ArquillianExtension;
+import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.spec.EnterpriseArchive;
+import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.jboss.shrinkwrap.api.spec.WebArchive;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.UUID;
+import static com.flowlogix.util.ShrinkWrapManipulator.logArchiveContents;
+import static com.tck.cdi.tests.common.TestUtil.addSlf4jLibraries;
+import static com.tck.cdi.tests.common.TestUtil.deleteAssertJ;
+import static org.assertj.core.api.Assertions.assertThat;
+
+@Slf4j
+@ExtendWith(PayaraServerLifecycleExtension.class)
+@ExtendWith(ArquillianExtension.class)
+class ApplicationSharedContextIT {
+    @EJB
+    EjbJarTwoRemote ejbJarTwo;
+
+    @Test
+    @OperateOnDeployment("APP_SHARED")
+    void contextActive() {
+        assertThat(ejbJarTwo).isNotNull();
+        assertThat(ejbJarTwo.getNumber()).isNotNull();
+        assertThat(ejbJarTwo.getNumber()).isInstanceOf(Integer.class);
+    }
+
+    @SuppressWarnings("unused")
+    @Deployment(name = "APP_SHARED", order = 1)
+    static EnterpriseArchive deploy() throws IOException {
+        var archive = ShrinkWrap.create(EnterpriseArchive.class)
+                .addAsLibrary(logArchiveContents(deleteAssertJ(ShrinkWrapManipulator
+                        .createDeployment(JavaArchive.class, "test-classes.jar")
+                        .addPackage(ApplicationSharedContextIT.class.getPackage())), System.out::println))
+                .addAsLibrary(logArchiveContents(deleteAssertJ(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                                "earlib1.jar", Path.of("../earlib1/pom.xml"))), System.out::println))
+                .addAsModule(logArchiveContents(ShrinkWrapManipulator.createDeployment(WebArchive.class,
+                                                UUID.randomUUID() + "-cdi-war1.war",
+                                                Path.of("../war1/pom.xml"))
+                                .deletePackages(true, "org.assertj")
+                                .filter(path -> !path.get().contains("WEB-INF/lib"))
+                                .filter(path -> !path.get().contains("earlib")),
+                                System.out::println))
+                .addAsModule(
+                        logArchiveContents(deleteAssertJ(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                                UUID.randomUUID() + "-cdi-ejbjar1.jar",
+                                Path.of("../ejbjar1/pom.xml"))), System.out::println));
+
+        addSlf4jLibraries(archive);
+        return logArchiveContents(archive, System.out::println);
+    }
+
+    @SuppressWarnings("unused")
+    @Deployment(name = "REMOTE_EJB", order = 2, testable = false)
+    static EnterpriseArchive deployRemoteEjb() throws IOException {
+        var archive = ShrinkWrap.create(EnterpriseArchive.class)
+                .addAsModule(
+                        logArchiveContents(deleteAssertJ(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                                UUID.randomUUID() + "-cdi-ejbjar2.jar",
+                                Path.of("../ejbjar2/pom.xml"))), System.out::println))
+                .addAsLibrary(logArchiveContents(deleteAssertJ(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                        "earlib1.jar", Path.of("../earlib1/pom.xml"))), System.out::println));
+        addSlf4jLibraries(archive);
+        return logArchiveContents(archive, System.out::println);
+    }
+}

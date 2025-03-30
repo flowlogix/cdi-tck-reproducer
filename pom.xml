@@ -12,6 +12,7 @@
         <module>war-lib</module>
         <module>earlib1</module>
         <module>ejbjar1</module>
+        <module>ejbjar2</module>
         <module>war1</module>
         <module>ear1</module>
         <module>tcktest</module>
