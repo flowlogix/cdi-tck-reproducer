@@ -82,6 +82,12 @@
             <artifactId>integration-test</artifactId>
             <version>${flowlogix.depchain.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eu.ingwar.tools</groupId>
+                    <artifactId>arquillian-suite-extension</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>fish.payara.arquillian</groupId>

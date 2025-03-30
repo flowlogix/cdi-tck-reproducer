@@ -21,11 +21,11 @@ package com.tck.cdi.tests;
 import com.flowlogix.testcontainers.PayaraServerLifecycleExtension;
 import com.flowlogix.util.ShrinkWrapManipulator;
 import com.tck.cdi.earlib1.EarLibCDIStarter;
+import com.tck.cdi.earlib1.EarLibService;
 import com.tck.cdi.earlib1.EjbJarOneRemote;
 import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import org.eu.ingwar.tools.arquillian.extension.suite.annotations.ArquillianSuiteDeployment;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit5.ArquillianExtension;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -35,22 +35,25 @@ import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 import static com.flowlogix.util.ShrinkWrapManipulator.logArchiveContents;
+import static com.tck.cdi.tests.common.TestUtil.addSlf4jLibraries;
+import static com.tck.cdi.tests.common.TestUtil.deleteAssertJ;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 @ExtendWith(PayaraServerLifecycleExtension.class)
 @ExtendWith(ArquillianExtension.class)
-@ArquillianSuiteDeployment
 class WebArchiveEscaperIT {
     @Inject
     EarLibCDIStarter earLibCDIStarter;
+
     @EJB
     EjbJarOneRemote ejbJarOneStartup;
+
+    @Inject
+    EarLibService webAppStartup;
 
     @Test
     void checkEarLibIsolation() {
@@ -64,29 +67,34 @@ class WebArchiveEscaperIT {
         assertThat(ejbJarOneStartup.getService()).isEqualTo("EarLibServiceImpl");
     }
 
+    @Test
+    void checkWebArchiveIsolation() {
+        assertThat(webAppStartup).isNotNull();
+        assertThat(webAppStartup.getService()).isEqualTo("War1ServiceImpl");
+    }
+
     @Deployment
     @SuppressWarnings("unused")
     static EnterpriseArchive deploy() throws IOException {
         var archive = ShrinkWrap.create(EnterpriseArchive.class)
-                .addAsLibrary(ShrinkWrapManipulator.createDeployment(JavaArchive.class, "test-classes.jar")
-                        .addPackage(WebArchiveEscaperIT.class.getPackage()))
-                .addAsLibrary(logArchiveContents(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
-                                "earlib1.jar", Path.of("../earlib1/pom.xml")), System.out::println))
+                .addAsLibrary(logArchiveContents(deleteAssertJ(ShrinkWrapManipulator
+                        .createDeployment(JavaArchive.class, "test-classes.jar")
+                        .addPackage(WebArchiveEscaperIT.class.getPackage())), System.out::println))
+                .addAsLibrary(logArchiveContents(deleteAssertJ(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                                "earlib1.jar", Path.of("../earlib1/pom.xml"))), System.out::println))
                 .addAsModule(logArchiveContents(ShrinkWrapManipulator.createDeployment(WebArchive.class,
                                                 UUID.randomUUID() + "-cdi-war1.war",
                                                 Path.of("../war1/pom.xml"))
-                                        .filter(path -> !path.get().contains("earlib")),
+                                .deletePackages(true, "org.assertj")
+                                .filter(path -> !path.get().contains("WEB-INF/lib"))
+                                .filter(path -> !path.get().contains("earlib")),
                                 System.out::println))
                 .addAsModule(
-                        logArchiveContents(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
+                        logArchiveContents(deleteAssertJ(ShrinkWrapManipulator.createDeployment(JavaArchive.class,
                                 UUID.randomUUID() + "-cdi-ejbjar1.jar",
-                                Path.of("../ejbjar1/pom.xml")), System.out::println));
+                                Path.of("../ejbjar1/pom.xml"))), System.out::println));
 
-        Files.walk(Paths.get("../ear1/target"))
-                .filter(path -> path.getFileName().toString().startsWith("org.slf4j-slf4j")
-                        && path.getFileName().toString().endsWith(".jar"))
-                .map(Path::toFile).forEach(jar -> archive.addAsLibrary(ShrinkWrap.createFromZipFile(JavaArchive.class, jar)));
-
+        addSlf4jLibraries(archive);
         return logArchiveContents(archive, System.out::println);
     }
 }
