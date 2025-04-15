@@ -1,6 +1,9 @@
 package com.tck.cdi.tests;
 
 import com.flowlogix.testcontainers.PayaraServerLifecycleExtension;
+import com.tck.cdi.tests.common.MyBean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import jakarta.enterprise.inject.spi.CDI;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import jakarta.json.bind.JsonbConfig;
@@ -89,6 +92,13 @@ class JsonbContextProviderIT {
         }
 
         public Jsonb getContext(final Class<?> type) {
+            if (runtimeType == SERVER) {
+                BeanManager bm = CDI.current().getBeanManager();
+                assertThat(((MyBean) bm.getReference(bm.resolve(bm.getBeans(MyBean.class)), MyBean.class,
+                        bm.createCreationalContext(null))).getName())
+                        .isEqualTo("MyBean");
+                assertThat(CDI.current().select(MyBean.class).get().getName()).isEqualTo("MyBean");
+            }
             if (!POJO.class.isAssignableFrom(type)) {
                 return null;
             }
@@ -161,6 +171,7 @@ class JsonbContextProviderIT {
     @Deployment
     @SuppressWarnings("unused")
     static WebArchive deploy() {
-        return packageSlf4j(createDeployment(WebArchive.class, name -> "jsonbcontext-" + name));
+        return packageSlf4j(createDeployment(WebArchive.class, name -> "jsonbcontext-" + name)
+                .addClass(MyBean.class));
     }
 }
