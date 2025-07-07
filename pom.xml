@@ -27,7 +27,7 @@
     <properties>
         <!-- Override target java release -->
         <!-- <maven.compiler.release>23</maven.compiler.release> -->
-        <flowlogix.depchain.version>69</flowlogix.depchain.version>
+        <flowlogix.depchain.version>70</flowlogix.depchain.version>
         <flowlogix.version>9.0.10</flowlogix.version>
         <arquillian.graphene.version>3.0.0-alpha.4</arquillian.graphene.version>
         <arquillian.payara.version>3.1</arquillian.payara.version>
