@@ -104,7 +104,7 @@
         <dependency>
             <groupId>org.eclipse.persistence</groupId>
             <artifactId>org.eclipse.persistence.jpa.modelgen.processor</artifactId>
-            <version>4.0.7</version>
+            <version>4.0.8</version>
             <scope>provided</scope>
         </dependency>
 
